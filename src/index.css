@@ -1,0 +1,328 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 140 10% 15%;
+    
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 142 70% 45%;
+    --primary-glow: 142 80% 50%;
+    
+    --secondary: 120 15% 92%;
+    --secondary-foreground: 140 10% 15%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 140 10% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 140 10% 15%;
+    
+    --muted: 120 10% 95%;
+    --muted-foreground: 140 5% 45%;
+    
+    --accent: 158 64% 52%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 120 10% 88%;
+    --input: 120 10% 88%;
+    --ring: 142 76% 36%;
+    
+    --radius: 0.5rem;
+    
+    /* Risk colors */
+    /* Risk Colors with variants */
+    --risk-drought-light: 0 73% 85%;
+    --risk-drought: 0 73% 70%;
+    --risk-drought-dark: 0 73% 55%;
+    
+    --risk-flooding-light: 215 100% 80%;
+    --risk-flooding: 215 100% 65%;
+    --risk-flooding-dark: 215 100% 50%;
+    
+    --risk-erosion-light: 25 85% 70%;
+    --risk-erosion: 25 85% 55%;
+    --risk-erosion-dark: 25 85% 40%;
+    
+    --risk-frost-light: 200 80% 75%;
+    --risk-frost: 200 80% 60%;
+    --risk-frost-dark: 200 80% 45%;
+    
+    --risk-heatwave-light: 15 90% 75%;
+    --risk-heatwave: 15 90% 60%;
+    --risk-heatwave-dark: 15 90% 45%;
+
+    /* Status Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(158 64% 52%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(120 15% 98%) 100%);
+    --gradient-glow: radial-gradient(circle at 50% 0%, hsl(142 76% 36% / 0.12) 0%, transparent 60%);
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(158 64% 52%) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(140 10% 15% / 0.08);
+    --shadow-md: 0 4px 6px -1px hsl(140 10% 15% / 0.12);
+    --shadow-lg: 0 10px 15px -3px hsl(140 10% 15% / 0.15);
+    --shadow-glow: 0 0 40px hsl(142 76% 36% / 0.25);
+    --shadow-card: 0 4px 12px hsl(140 10% 15% / 0.08);
+
+    --sidebar-background: 210 18% 10%;
+    --sidebar-foreground: 180 5% 95%;
+    --sidebar-primary: 180 85% 58%;
+    --sidebar-primary-foreground: 210 20% 6%;
+    --sidebar-accent: 210 15% 15%;
+    --sidebar-accent-foreground: 180 5% 95%;
+    --sidebar-border: 210 15% 18%;
+    --sidebar-ring: 180 85% 58%;
+  }
+
+  .dark {
+    --background: 210 20% 6%;
+    --foreground: 180 5% 95%;
+    
+    --primary: 180 85% 58%;
+    --primary-foreground: 210 20% 6%;
+    --primary-light: 165 80% 65%;
+    --primary-glow: 180 90% 70%;
+    
+    --card: 210 18% 10%;
+    --card-foreground: 180 5% 95%;
+    
+    --popover: 210 18% 10%;
+    --popover-foreground: 180 5% 95%;
+    
+    --secondary: 210 15% 12%;
+    --secondary-foreground: 180 5% 95%;
+    
+    --muted: 210 15% 15%;
+    --muted-foreground: 180 5% 60%;
+    
+    --accent: 165 80% 58%;
+    --accent-foreground: 210 20% 6%;
+    
+    --border: 210 15% 18%;
+    --input: 210 15% 18%;
+    --ring: 180 85% 58%;
+    
+    --gradient-card: linear-gradient(180deg, hsl(210 18% 10%) 0%, hsl(210 18% 12%) 100%);
+    --gradient-glow: radial-gradient(circle at 50% 0%, hsl(180 85% 58% / 0.2) 0%, transparent 60%);
+    
+    --shadow-card: 0 4px 12px hsl(210 20% 6% / 0.6);
+    --shadow-glow: 0 0 40px hsl(180 85% 58% / 0.4);
+
+    --sidebar-background: 210 18% 10%;
+    --sidebar-foreground: 180 5% 95%;
+    --sidebar-primary: 180 85% 58%;
+    --sidebar-primary-foreground: 210 20% 6%;
+    --sidebar-accent: 210 15% 15%;
+    --sidebar-accent-foreground: 180 5% 95%;
+    --sidebar-border: 210 15% 18%;
+    --sidebar-ring: 180 85% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Leaflet Draw Custom Styles */
+@layer components {
+  /* Mejorar los controles de dibujo */
+  .leaflet-draw-toolbar a {
+    @apply bg-card text-foreground border-border hover:bg-accent hover:text-accent-foreground transition-colors duration-200;
+    background-image: none !important;
+    border-radius: 6px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .leaflet-draw-toolbar a:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Iconos personalizados usando emojis/símbolos */
+  .leaflet-draw-draw-polygon::before {
+    content: "▽";
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .leaflet-draw-draw-rectangle::before {
+    content: "□";
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .leaflet-draw-edit-edit::before {
+    content: "✎";
+    font-size: 18px;
+  }
+
+  .leaflet-draw-edit-remove::before {
+    content: "🗑";
+    font-size: 16px;
+  }
+
+  /* Mejorar tooltips */
+  .leaflet-draw-tooltip {
+    @apply bg-card text-foreground border-border shadow-lg;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .leaflet-draw-tooltip-single {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .leaflet-draw-tooltip-subtext {
+    @apply text-muted-foreground;
+    font-size: 11px;
+  }
+
+  /* Mejorar vértices durante la edición */
+  .custom-vertex-icon,
+  .leaflet-editing-icon {
+    @apply bg-primary border-2 border-primary-foreground;
+    border-radius: 50%;
+    width: 10px !important;
+    height: 10px !important;
+    margin-left: -5px !important;
+    margin-top: -5px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: move;
+    transition: all 0.2s;
+  }
+
+  .leaflet-editing-icon:hover {
+    background: hsl(var(--primary-light));
+    transform: scale(1.3);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Mejorar líneas guía */
+  .leaflet-interactive.leaflet-draw-guide {
+    stroke-dasharray: 8, 8;
+    stroke-width: 2;
+    stroke: hsl(var(--primary));
+    opacity: 0.6;
+  }
+
+  /* Estilo para áreas seleccionadas */
+  .leaflet-draw-section {
+    margin-bottom: 8px;
+  }
+
+  /* Mejorar acciones de la barra */
+  .leaflet-draw-actions {
+    @apply bg-card/95 border-border;
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .leaflet-draw-actions a {
+    @apply text-foreground hover:bg-accent hover:text-accent-foreground;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .leaflet-draw-actions a:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Mejorar el estado activo */
+  .leaflet-draw-toolbar .leaflet-draw-draw-polygon.leaflet-draw-toolbar-button-enabled,
+  .leaflet-draw-toolbar .leaflet-draw-draw-rectangle.leaflet-draw-toolbar-button-enabled,
+  .leaflet-draw-edit-edit.leaflet-draw-toolbar-button-enabled,
+  .leaflet-draw-edit-remove.leaflet-draw-toolbar-button-enabled {
+    @apply bg-primary text-primary-foreground;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+  }
+
+  /* Mejorar área de medición */
+  .leaflet-draw-tooltip-single {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+}
+
+/* Driver.js Tutorial Customization */
+@layer components {
+  .driver-popover {
+    @apply bg-card text-foreground border-border shadow-xl;
+  }
+
+  .driver-popover-title {
+    @apply text-lg font-bold text-primary;
+  }
+
+  .driver-popover-description {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .driver-popover-btn {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium transition-colors;
+  }
+
+  .driver-popover-btn-disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .driver-active-element {
+    @apply outline outline-4 outline-primary/50;
+  }
+
+  /* Leaflet Map Fix - CRITICAL for map rendering */
+  .leaflet-container {
+    height: 100% !important;
+    width: 100% !important;
+    z-index: 1;
+  }
+
+  /* Ensure map container has proper dimensions */
+  #map-container,
+  .map-wrapper {
+    height: 100%;
+    width: 100%;
+    position: relative;
+  }
+}
