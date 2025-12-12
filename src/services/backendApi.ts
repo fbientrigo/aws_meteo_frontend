@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Parcel, PaddockDetailed } from "@/types";
+import { Parcel, PaddockDetailed, STIDataResponse } from "@/types";
 import { UserProfile } from "@/types/user";
 
 // ===========================================
@@ -7,6 +7,7 @@ import { UserProfile } from "@/types/user";
 // ===========================================
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 const API_URL = import.meta.env.VITE_API_URL || '';
+const STI_API_URL = import.meta.env.VITE_STI_API_URL || 'http://localhost:8000';
 
 // ===========================================
 // Types
@@ -442,6 +443,54 @@ export const chatApi = {
 };
 
 // ===========================================
+// STI API
+// ===========================================
+export const stiApi = {
+    getSubset: async (
+        run: string,
+        step: string,
+        bounds: { lat_min: number; lat_max: number; lon_min: number; lon_max: number }
+    ): Promise<ApiResponse<STIDataResponse>> => {
+        if (USE_MOCK) {
+            return { data: null, error: "Mock data not available for STI. Please set VITE_USE_MOCK_DATA=false" };
+        }
+
+        try {
+            const params = new URLSearchParams({
+                lat_min: bounds.lat_min.toString(),
+                lat_max: bounds.lat_max.toString(),
+                lon_min: bounds.lon_min.toString(),
+                lon_max: bounds.lon_max.toString(),
+            });
+
+            const url = `${STI_API_URL}/sti/${run}/${step}/subset?${params.toString()}`;
+
+            // Mixed Content Warning
+            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http:')) {
+                console.warn(
+                    '⚠️ Mixed Content Warning: You are calling an HTTP Backend from an HTTPS Frontend.\n' +
+                    'If this fails, ensure your browser allows mixed content or serve the frontend via HTTP.'
+                );
+            }
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Backend Error (${response.status}): ${errorText}`);
+            }
+
+            const data: STIDataResponse = await response.json();
+            return { data, error: null };
+
+        } catch (err: any) {
+            console.error('Error fetching STI subset:', err);
+            return { data: null, error: err.message };
+        }
+    },
+};
+
+// ===========================================
 // Export all APIs
 // ===========================================
 export const backendApi = {
@@ -450,4 +499,5 @@ export const backendApi = {
     profile: profileApi,
     risks: risksApi,
     chat: chatApi,
+    sti: stiApi,
 };

@@ -94,7 +94,7 @@ export interface STIDataResponse {
   step: string;
   latitudes: number[];
   longitudes: number[];
-  sti: number[][];
+  sti: number[];
 }
 
 export interface CropLayer {
