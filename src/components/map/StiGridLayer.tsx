@@ -10,7 +10,7 @@ interface DebugGridLayerProps {
     onHover?: (point: HeatmapPoint | null) => void;
 }
 
-const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) => {
+const StiGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) => {
     const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
     useEffect(() => {
@@ -24,7 +24,7 @@ const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) 
 
         if (!visible || points.length === 0) return;
 
-        console.log('🐞 DebugGridLayer rendering points:', points.length);
+        console.log('🐞 StiGridLayer rendering points:', points.length);
 
         const layerGroup = L.layerGroup();
 
@@ -37,14 +37,14 @@ const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) 
         if (points.length > MAX_POINTS) {
             const step = Math.ceil(points.length / MAX_POINTS);
             renderPoints = points.filter((_, i) => i % step === 0);
-            console.log(`🐞 [DebugGridLayer] Sampling 1/${step} points. Showing ${renderPoints.length}/${points.length} for coverage.`);
+            console.log(`🐞 [StiGridLayer] Sampling 1/${step} points. Showing ${renderPoints.length}/${points.length} for coverage.`);
         }
 
         // DEBUG: Sample the first few points to check color/severity
         if (renderPoints.length > 0) {
             const sample = renderPoints[0];
             const sampleColor = getSeverityColor(sample.severity);
-            console.log("🐛 [DebugGridLayer] Sample Point:", {
+            console.log("🐛 [StiGridLayer] Sample Point:", {
                 severity: sample.severity,
                 color: sampleColor,
                 lat: sample.lat,
@@ -55,32 +55,35 @@ const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) 
         renderPoints.forEach(p => {
             const color = getSeverityColor(p.severity);
 
-            // Create a small circle marker for each point
-            const marker = L.circleMarker([p.lat, p.lng], {
-                radius: 5, // Slightly larger
-                fillColor: color, // First attempt
-                color: '#fff',
-                weight: 1.5,
-                opacity: 1,
-                fillOpacity: 0.9,
-                fill: true, // Explicitly enable fill
+            // GRID SIZE ESTIMATION:
+            // Standard global models are often 0.25 degrees (~27km).
+            // We use half-width of 0.125 to create a square centered on the point.
+            // Adjust this delta if gaps appear or overlap is too heavy.
+            const delta = 0.125;
+            const bounds: L.LatLngBoundsExpression = [
+                [p.lat - delta, p.lng - delta],
+                [p.lat + delta, p.lng + delta]
+            ];
+
+            // Render as a Rectangle (Grid Cell)
+            const rectangle = L.rectangle(bounds, {
+                color: color,       // Border color (same as fill to hide borders if needed)
+                weight: 1,          // Thin border
+                fillColor: color,
+                fillOpacity: 0.6,   // Semi-transparent
                 interactive: true,
                 bubblingMouseEvents: false
             });
 
-            // FORCE STYLE UPDATE (Double-tap to ensure React/Leaflet didn't miss it)
-            // Sometimes custom props need a tick or explicit set
-            marker.setStyle({ fillColor: color, fillOpacity: 0.9 });
-
             // Hover Events
             if (onHover) {
-                marker.on('mouseover', (e) => {
+                rectangle.on('mouseover', (e) => {
                     onHover(p);
-                    e.target.setStyle({ weight: 3, color: '#000' });
+                    e.target.setStyle({ weight: 2, color: '#000', fillOpacity: 0.9 }); // Highlight
                 });
-                marker.on('mouseout', (e) => {
+                rectangle.on('mouseout', (e) => {
                     onHover(null);
-                    e.target.setStyle({ weight: 1.5, color: '#fff' });
+                    e.target.setStyle({ weight: 1, color: color, fillOpacity: 0.6 }); // Restore
                 });
             }
 
@@ -94,8 +97,8 @@ const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) 
                 </div>
             `;
 
-            marker.bindPopup(popupContent);
-            layerGroup.addLayer(marker);
+            rectangle.bindPopup(popupContent);
+            layerGroup.addLayer(rectangle);
         });
 
         layerGroup.addTo(map);
@@ -111,4 +114,4 @@ const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) 
     return null;
 };
 
-export default DebugGridLayer;
+export default StiGridLayer;

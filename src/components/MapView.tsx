@@ -37,6 +37,7 @@ import { usePolygonEditMode } from "@/hooks/usePolygonEditMode";
 import RiskHeatmapLayer from "@/components/map/RiskHeatmapLayer";
 import { generateRiskHeatmapPoints } from "@/utils/riskHeatmapUtils";
 import DebugGridLayer from "@/components/map/DebugGridLayer";
+import StiGridLayer from "@/components/map/StiGridLayer";
 import VisualizationControls from "@/components/map/VisualizationControls";
 import { isExtremeHeat, isExtremeCold, getSeverityLabel } from "@/utils/climatUtils";
 import { HeatmapPoint } from "@/types";
@@ -184,8 +185,8 @@ const MapView = () => {
     if (!stiData || !stiData.points) return { heat: [], cold: [], all: [] };
 
     const all = stiData.points;
-    const heat = stiData.points.filter(p => isExtremeHeat(p.intensity));
-    const cold = stiData.points.filter(p => isExtremeCold(p.intensity));
+    const heat = stiData.points.filter(p => isExtremeHeat(p.rawValue));
+    const cold = stiData.points.filter(p => isExtremeCold(p.rawValue));
 
     console.log("📊 [MapView] Derived Datasets:", {
       total: all.length,
@@ -890,7 +891,7 @@ const MapView = () => {
       {/* Extreme Heat Overlay */}
       {/* Extreme Heat Overlay */}
       {isMapLoaded && showExtremeHeat && (
-        <DebugGridLayer
+        <StiGridLayer
           map={mapRef.current}
           points={visualizationPoints.heat}
           visible={true}
@@ -900,7 +901,7 @@ const MapView = () => {
 
       {/* Extreme Cold Overlay */}
       {isMapLoaded && showExtremeCold && (
-        <DebugGridLayer
+        <StiGridLayer
           map={mapRef.current}
           points={visualizationPoints.cold}
           visible={true}
@@ -910,7 +911,7 @@ const MapView = () => {
 
       {/* Debug Grid Layer (Full Raw Data) */}
       {isMapLoaded && showDebugGrid && !showExtremeHeat && !showExtremeCold && (
-        <DebugGridLayer
+        <StiGridLayer
           map={mapRef.current}
           points={stiData?.points || []}
           visible={true}

@@ -48,47 +48,57 @@ export function transformToHeatmapPoints(
 
     // Validate min/max
     const validRange = typeof min === 'number' && typeof max === 'number';
-    const isSingularity = validRange && min === max;
-    const hasNormalization = validRange && max! > min!;
-    const range = hasNormalization ? (max! - min!) : 1;
+
+    // CLAMP LIMITS
+    const CLAMP_MIN = -8.0;
+    const CLAMP_MAX = 8.0;
+
+    // Calculate effective min/max for normalization, respecting the clamp limits
+    let effectiveMin = validRange ? Math.max(CLAMP_MIN, min!) : 0;
+    let effectiveMax = validRange ? Math.min(CLAMP_MAX, max!) : 1;
+
+    // Handle singularity or inverted range after clamping
+    if (effectiveMin >= effectiveMax) {
+        if (validRange && min! < max!) {
+            // If original range was valid but clamping collapsed it (unlikely unless data is all outliers)
+            effectiveMin = CLAMP_MIN;
+            effectiveMax = CLAMP_MAX;
+        }
+    }
+
+    // If even after adjustment they are equal, handle singularity
+    const isSingularity = effectiveMin === effectiveMax;
+    const range = effectiveMax - effectiveMin;
 
     const points: HeatmapPoint[] = [];
 
     for (let i = 0; i < length; i++) {
         const lat = latitudes[i];
         const lng = longitudes[i];
-        const rawValue = stiValues[i];
+        let rawValue = stiValues[i];
 
         // Filter out invalid coordinates or values
         if (
-            typeof lat === 'number' && !isNaN(lat) &&
-            typeof lng === 'number' && !isNaN(lng) &&
-            typeof rawValue === 'number' && !isNaN(rawValue)
+            Number.isFinite(lat) &&
+            Number.isFinite(lng) &&
+            Number.isFinite(rawValue)
         ) {
-            // Normalize intensity to 0-1 range if scale is provided
-            let intensity = rawValue;
-            if (isSingularity) {
-                // First Principle: If min == max, there is no variation.
-                // We define this state as 'Neutral' or 'Low' risk depending on domain.
-                // Returning 0 ensures it maps to the bottom of the scale (e.g. Green).
-                intensity = 0;
-            } else if (hasNormalization) {
-                // Clamp and normalize
-                intensity = (rawValue - min!) / range;
-                intensity = Math.max(0, Math.min(1, intensity));
-            }
+            // Apply Clamp to Data Point
+            rawValue = Math.max(CLAMP_MIN, Math.min(CLAMP_MAX, rawValue));
+
+            // Normalize intensity based on MAGNITUDE (Severity)
+            // 0 -> Safe (Green)
+            // Extremes (+/- 8) -> Dangerous (Red)
+            // We saturate at +/- 5 to ensure high visibility of severe events
+            const MAX_SEVERITY_REF = 5.0;
+            let intensity = Math.min(1.0, Math.abs(rawValue) / MAX_SEVERITY_REF);
 
             points.push({
                 lat,
                 lng,
-                intensity,
-                severity: categorizeSeverity(intensity) // Use normalized intensity for severity for now, or raw? 
-                // Note: categorizeSeverity seems hardcoded for 0-5 range in original code. 
-                // If we normalize to 0-1, we might need to adjust categorizeSeverity or map 0-1 back to 0-5.
-                // For now, let's assume we want to map the Normalized 0-1 to Severity.
-                // Wait, existing check `sti < 1` etc implies 0-5 range. 
-                // Let's Scale 0-1 to 0-5 for severity categorization to keep logic consistent?
-                // Or better, let's use the heatmap gradient logic which usually expects 0-1.
+                intensity, // Normalized magnitude (0 to 1) for heatmap color
+                rawValue,  // Raw signed value for logic
+                severity: categorizeSeverity(rawValue) // Use RAW value for categorization
             });
         }
     }
@@ -98,30 +108,36 @@ export function transformToHeatmapPoints(
 
 /**
  * Categorize STI value into severity level
- * Assumes input is normalized 0-1 or raw 0-5? 
- * Let's adjust this to work with the normalized 0-1 intensity we just calculated.
+ * Uses raw STI value (not normalized)
  */
-export function categorizeSeverity(intensity: number): SeverityLevel {
-    // Map 0-1 to severity levels
-    if (intensity < 0.2) return 'VERY_LOW';
-    if (intensity < 0.4) return 'LOW';
-    if (intensity < 0.6) return 'MODERATE';
-    if (intensity < 0.8) return 'HIGH';
+export function categorizeSeverity(value: number): SeverityLevel {
+    const absVal = Math.abs(value);
+
+    // Thresholds based on user input:
+    // Near 0 (-1 to 1) -> Low/Very Low
+    // +/- 3 -> Severe (High)
+
+    if (absVal < 1.0) return 'VERY_LOW';
+    if (absVal < 2.0) return 'LOW';
+    if (absVal < 3.0) return 'MODERATE';
+    if (absVal < 4.0) return 'HIGH';
     return 'VERY_HIGH';
 }
 
 /**
  * Determine if intensity represents extreme heat (Top 20%)
+ * Uses raw STI value
  */
-export function isExtremeHeat(intensity: number): boolean {
-    return intensity >= 0.8;
+export function isExtremeHeat(value: number): boolean {
+    return value >= 3.0; // Heatwave starts at +3 based on user input
 }
 
 /**
  * Determine if intensity represents extreme cold (Bottom 20%)
+ * Uses raw STI value
  */
-export function isExtremeCold(intensity: number): boolean {
-    return intensity <= 0.2;
+export function isExtremeCold(value: number): boolean {
+    return value <= -3.0; // Frost starts at -3 based on user input
 }
 
 /**

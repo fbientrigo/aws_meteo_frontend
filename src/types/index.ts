@@ -128,6 +128,7 @@ export interface HeatmapPoint {
   lng: number;
   intensity: number;
   severity: SeverityLevel;
+  rawValue: number; // STI value (clamped) without normalization
 }
 
 // New Types for Phase 2 & 3
