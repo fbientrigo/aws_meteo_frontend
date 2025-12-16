@@ -126,7 +126,7 @@ export interface NatureSolution {
 export interface HeatmapPoint {
   lat: number;
   lng: number;
-  value: number;
+  intensity: number;
   severity: SeverityLevel;
 }
 

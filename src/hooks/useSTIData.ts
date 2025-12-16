@@ -21,18 +21,44 @@ export const useSTIData = (run: string | null, step: string | null, bounds: Boun
             if (!run || !step) {
                 return null;
             }
+            console.log(`📥 [useSTIData] Fetching subset for run=${run}, step=${step}...`);
             const data = await stiService.getSTISubset(run, step, bounds);
 
-            // Transform to heatmap points with severity categorization
+            // Calculate statistics for normalization
+            const stiValues = data.sti;
+            const validValues = stiValues.filter(v => !isNaN(v));
+
+            const min = validValues.length > 0 ? Math.min(...validValues) : 0;
+            const max = validValues.length > 0 ? Math.max(...validValues) : 1;
+            const mean = validValues.length > 0 ? validValues.reduce((a, b) => a + b, 0) / validValues.length : 0;
+
+            console.log("🔍 STI Data Debug:", {
+                run,
+                step,
+                totalPoints: stiValues.length,
+                validPoints: validValues.length,
+                step,
+                totalPoints: stiValues.length,
+                validPoints: validValues.length,
+                stats: { min, max, mean },
+                validSample: validValues.slice(0, 5),
+                rawSample: stiValues.slice(0, 5),
+                typeOfFirst: typeof stiValues[0]
+            });
+
+            // Transform to heatmap points with severity categorization using global min/max
             const points = transformToHeatmapPoints(
                 data.latitudes,
                 data.longitudes,
-                data.sti
+                data.sti,
+                min,
+                max
             );
 
             return {
                 raw: data,
-                points
+                points,
+                stats: { min, max, mean }
             };
         },
         enabled: !!run && !!step,

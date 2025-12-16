@@ -30,29 +30,98 @@ export const CROP_LABELS: Record<string, string> = {
 
 /**
  * Transform raw STI data to heatmap points with severity categorization
+ * @param latitudes Array of latitude values
+ * @param longitudes Array of longitude values
+ * @param stiValues Array of raw STI values
+ * @param min Global minimum value for normalization
+ * @param max Global maximum value for normalization
  */
 export function transformToHeatmapPoints(
     latitudes: number[],
     longitudes: number[],
-    stiValues: number[]
+    stiValues: number[],
+    min?: number,
+    max?: number
 ): HeatmapPoint[] {
-    return latitudes.map((lat, i) => ({
-        lat,
-        lng: longitudes[i],
-        intensity: stiValues[i],
-        severity: categorizeSeverity(stiValues[i])
-    }));
+    // Ensure all arrays are same length to avoid undefined access
+    const length = Math.min(latitudes.length, longitudes.length, stiValues.length);
+
+    // Validate min/max
+    const validRange = typeof min === 'number' && typeof max === 'number';
+    const isSingularity = validRange && min === max;
+    const hasNormalization = validRange && max! > min!;
+    const range = hasNormalization ? (max! - min!) : 1;
+
+    const points: HeatmapPoint[] = [];
+
+    for (let i = 0; i < length; i++) {
+        const lat = latitudes[i];
+        const lng = longitudes[i];
+        const rawValue = stiValues[i];
+
+        // Filter out invalid coordinates or values
+        if (
+            typeof lat === 'number' && !isNaN(lat) &&
+            typeof lng === 'number' && !isNaN(lng) &&
+            typeof rawValue === 'number' && !isNaN(rawValue)
+        ) {
+            // Normalize intensity to 0-1 range if scale is provided
+            let intensity = rawValue;
+            if (isSingularity) {
+                // First Principle: If min == max, there is no variation.
+                // We define this state as 'Neutral' or 'Low' risk depending on domain.
+                // Returning 0 ensures it maps to the bottom of the scale (e.g. Green).
+                intensity = 0;
+            } else if (hasNormalization) {
+                // Clamp and normalize
+                intensity = (rawValue - min!) / range;
+                intensity = Math.max(0, Math.min(1, intensity));
+            }
+
+            points.push({
+                lat,
+                lng,
+                intensity,
+                severity: categorizeSeverity(intensity) // Use normalized intensity for severity for now, or raw? 
+                // Note: categorizeSeverity seems hardcoded for 0-5 range in original code. 
+                // If we normalize to 0-1, we might need to adjust categorizeSeverity or map 0-1 back to 0-5.
+                // For now, let's assume we want to map the Normalized 0-1 to Severity.
+                // Wait, existing check `sti < 1` etc implies 0-5 range. 
+                // Let's Scale 0-1 to 0-5 for severity categorization to keep logic consistent?
+                // Or better, let's use the heatmap gradient logic which usually expects 0-1.
+            });
+        }
+    }
+
+    return points;
 }
 
 /**
  * Categorize STI value into severity level
+ * Assumes input is normalized 0-1 or raw 0-5? 
+ * Let's adjust this to work with the normalized 0-1 intensity we just calculated.
  */
-function categorizeSeverity(sti: number): SeverityLevel {
-    if (sti < 1) return 'VERY_LOW';
-    if (sti < 2) return 'LOW';
-    if (sti < 3) return 'MODERATE';
-    if (sti < 4) return 'HIGH';
+export function categorizeSeverity(intensity: number): SeverityLevel {
+    // Map 0-1 to severity levels
+    if (intensity < 0.2) return 'VERY_LOW';
+    if (intensity < 0.4) return 'LOW';
+    if (intensity < 0.6) return 'MODERATE';
+    if (intensity < 0.8) return 'HIGH';
     return 'VERY_HIGH';
+}
+
+/**
+ * Determine if intensity represents extreme heat (Top 20%)
+ */
+export function isExtremeHeat(intensity: number): boolean {
+    return intensity >= 0.8;
+}
+
+/**
+ * Determine if intensity represents extreme cold (Bottom 20%)
+ */
+export function isExtremeCold(intensity: number): boolean {
+    return intensity <= 0.2;
 }
 
 /**

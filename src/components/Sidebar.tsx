@@ -19,6 +19,54 @@ const Sidebar = ({ onClose }: SidebarProps) => {
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <h2 className="font-semibold text-lg">Panel de Control</h2>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:flex gap-2"
+            title="Verificar Conexión y Datos"
+            onClick={async () => {
+              try {
+                const { stiService } = await import('@/services/stiService');
+                const { toast } = await import('sonner');
+                const { useAppStore } = await import('@/store/useAppStore');
+
+                const url = import.meta.env.VITE_STI_API_URL;
+                toast.info(`Probando conexión a: ${url}...`);
+
+                try {
+                  const health = await fetch(`${url}/health`).catch(e => { throw new Error(e.message) });
+                  if (!health.ok) throw new Error(`Health status: ${health.status}`);
+                  toast.success("Health Check: OK");
+                } catch (e: any) {
+                  toast.error(`Error de Red: ${e.message}`);
+                  return;
+                }
+
+                const runs = await stiService.getRuns();
+
+                if (runs && runs.length > 0) {
+                  toast.success(`Runs: ${runs.join(', ')}`);
+
+                  const latestRun = runs[0];
+                  useAppStore.getState().setSelectedRun(latestRun);
+
+                  const steps = await stiService.getStepsForRun(latestRun);
+                  if (steps && steps.length > 0) {
+                    useAppStore.getState().setSelectedStep(steps[0]);
+                    toast.success(`Cargando run: ${latestRun}`);
+                  }
+                } else {
+                  toast.warning('No runs available');
+                }
+              } catch (e: any) {
+                console.error(e);
+                const { toast } = await import('sonner');
+                toast.error(`Error: ${e.message}`);
+              }
+            }}
+          >
+            <span className="text-xs">🛰️ TEST</span>
+          </Button>
           <ExportPDFButton />
           <Button
             variant="ghost"

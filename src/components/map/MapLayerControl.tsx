@@ -110,6 +110,49 @@ const MapLayerControl = ({ onBaseLayerChange, currentBaseLayer }: MapLayerContro
 
             <div className="border-t border-border my-3" />
 
+            {/* Climate Data Control */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2 block">Climate Data</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={async () => {
+                  try {
+                    const { stiService } = await import('@/services/stiService');
+                    const { toast } = await import('sonner');
+                    const { useAppStore } = await import('@/store/useAppStore');
+
+                    toast.info('Fetching latest satellite data...');
+                    const runs = await stiService.getRuns();
+
+                    if (runs && runs.length > 0) {
+                      const latestRun = runs[0];
+                      useAppStore.getState().setSelectedRun(latestRun);
+
+                      const steps = await stiService.getStepsForRun(latestRun);
+                      if (steps && steps.length > 0) {
+                        useAppStore.getState().setSelectedStep(steps[0]);
+                        toast.success(`Loaded Run: ${latestRun}`);
+                      } else {
+                        toast.warning('No steps found for this run');
+                      }
+                    } else {
+                      toast.error('No runs available from backend');
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    const { toast } = await import('sonner');
+                    toast.error('Failed to connect to satellite backend');
+                  }
+                }}
+              >
+                <span className="text-xs">🛰️ Update Satellite Data</span>
+              </Button>
+            </div>
+
+            <div className="border-t border-border my-3" />
+
             {/* Additional Layers */}
             <div>
               <Label className="text-xs text-muted-foreground mb-2 block">Other Layers</Label>

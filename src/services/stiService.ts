@@ -10,8 +10,8 @@ import {
  * Currently using mock data for demonstration
  */
 
-const API_BASE_URL = import.meta.env.VITE_STI_API_URL || '';
-const USE_MOCK = !API_BASE_URL || API_BASE_URL === '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 /**
  * Get list of available runs
@@ -28,7 +28,8 @@ export const getRuns = async (): Promise<string[]> => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return await response.json();
+        const data = await response.json();
+        return data.runs;
     } catch (error) {
         console.error('Error fetching runs:', error);
         throw error;
@@ -49,7 +50,8 @@ export const getStepsForRun = async (run: string): Promise<string[]> => {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return await response.json();
+        const data = await response.json();
+        return data.steps;
     } catch (error) {
         console.error(`Error fetching steps for run ${run}:`, error);
         throw error;

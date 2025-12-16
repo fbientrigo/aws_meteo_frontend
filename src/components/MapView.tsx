@@ -36,6 +36,9 @@ import { useFarmLayers } from "@/hooks/useFarmLayers";
 import { usePolygonEditMode } from "@/hooks/usePolygonEditMode";
 import RiskHeatmapLayer from "@/components/map/RiskHeatmapLayer";
 import { generateRiskHeatmapPoints } from "@/utils/riskHeatmapUtils";
+import DebugGridLayer from "@/components/map/DebugGridLayer";
+import VisualizationControls from "@/components/map/VisualizationControls";
+import { isExtremeHeat, isExtremeCold } from "@/utils/climatUtils";
 
 const MapView = () => {
   const mapRef = useRef<L.Map | null>(null);
@@ -97,7 +100,7 @@ const MapView = () => {
   const { data: stiData } = useSTIData(
     selectedRun,
     selectedStep,
-    { lat_min: -35, lat_max: -32, lon_min: -72, lon_max: -70 }
+    { lat_min: -58, lat_max: -17, lon_min: -80, lon_max: -60 }
   );
 
   // Get active crop layers
@@ -145,6 +148,44 @@ const MapView = () => {
 
   const { heatmapData } = useMapLayers(centerLat, centerLng);
 
+  // Visualization Controls State
+  const [showTempIndex, setShowTempIndex] = useState(true);
+  const [showExtremeHeat, setShowExtremeHeat] = useState(false);
+  const [showExtremeCold, setShowExtremeCold] = useState(false);
+
+  // Debug State - initialized from env
+  const [showDebugGrid, setShowDebugGrid] = useState(import.meta.env.VITE_DEBUG_MODE === 'true');
+
+  // TRIGGER DIAGNOSTIC LOGS
+  useEffect(() => {
+    console.log("🚀 [MapView] MOUNTED");
+    console.log("🐛 [MapView] VITE_DEBUG_MODE raw:", import.meta.env.VITE_DEBUG_MODE);
+    console.log("🐛 [MapView] showDebugGrid state:", showDebugGrid);
+  }, []); // Run once on mount
+
+  // Trigger debug logging manually
+  useEffect(() => {
+    if (showDebugGrid && stiData) {
+      console.log("🐞 [MapView] Debug Mode Active: Showing Grid Layer");
+    }
+    if (stiData) {
+      console.log("📊 [MapView] STI Data Present. Points:", stiData.points?.length);
+    } else {
+      console.log("⚠️ [MapView] STI Data is NULL");
+    }
+  }, [showDebugGrid, stiData]);
+
+  // Derived datasets for visualization
+  const visualizationPoints = useMemo(() => {
+    if (!stiData || !stiData.points) return { heat: [], cold: [], all: [] };
+
+    return {
+      all: stiData.points,
+      heat: stiData.points.filter(p => isExtremeHeat(p.intensity)),
+      cold: stiData.points.filter(p => isExtremeCold(p.intensity))
+    };
+  }, [stiData]);
+
   // Handle FlyTo from Store
   useEffect(() => {
     if (mapRef.current && flyToLocation) {
@@ -155,6 +196,25 @@ const MapView = () => {
       );
     }
   }, [flyToLocation]);
+
+  // Auto-Fly to STI Data Bounds
+  // Auto-Fly to STI Data Bounds
+  useEffect(() => {
+    if (mapRef.current && stiData && stiData.points && stiData.points.length > 0) {
+      try {
+        // Calculate bounds dynamically from valid points
+        const points = stiData.points.map(p => [p.lat, p.lng] as [number, number]);
+        const bounds = L.latLngBounds(points);
+
+        if (bounds.isValid()) {
+          mapRef.current.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
+          toast.success("Enfocando datos satelitales...");
+        }
+      } catch (error) {
+        console.error("Error calculating bounds:", error);
+      }
+    }
+  }, [stiData]);
 
   const filteredRisks = useMemo(() => {
     const periodMultiplier = selectedTimePeriod === 'current' ? 1 : 1.35;
@@ -755,9 +815,27 @@ const MapView = () => {
     toast.info('Potrero descartado');
   }, [pendingPaddockData]);
 
+
+  // ... previous imports ...
+  // Inside MapView component
+  // ... existing code ...
+
   return (
     <div className="flex-1 relative min-h-0 map-wrapper" id="welcome-step">
       <div ref={mapContainerRef} id="map-container" className="absolute inset-0" />
+
+      {/* Visualization Controls Panel */}
+      <VisualizationControls
+        showTempIndex={showTempIndex}
+        setShowTempIndex={setShowTempIndex}
+        showExtremeHeat={showExtremeHeat}
+        setShowExtremeHeat={setShowExtremeHeat}
+        showExtremeCold={showExtremeCold}
+        setShowExtremeCold={setShowExtremeCold}
+        showDebugGrid={showDebugGrid}
+        setShowDebugGrid={setShowDebugGrid}
+        debugModeAvailable={import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.DEV}
+      />
 
       {/* Map Loading Skeleton */}
       {!isMapLoaded && (
@@ -766,18 +844,46 @@ const MapView = () => {
         </div>
       )}
 
-      {/* Risk Heatmap Layers */}
-      {isMapLoaded && mapLayers.risks && activeRisks.map((riskType, index) => (
+      {/* STI Heatmap Layer (Standard) */}
+      {isMapLoaded && showTempIndex && stiData && (
         <RiskHeatmapLayer
-          key={riskType}
           map={mapRef.current}
-          points={riskHeatmapPoints[riskType] || []}
-          riskType={riskType}
+          points={toLeafletHeatFormat(visualizationPoints.all)} // Use all points for general index
+          riskType="drought" // Re-using heat ramp from drought/heat
           visible={true}
-          opacity={heatmapOpacity}
-          zIndex={600 + index}
+          opacity={0.6}
+          zIndex={500}
         />
-      ))}
+      )}
+
+      {/* Extreme Heat Overlay */}
+      {isMapLoaded && showExtremeHeat && (
+        <DebugGridLayer
+          map={mapRef.current}
+          points={visualizationPoints.heat}
+          visible={true}
+        />
+      )}
+
+      {/* Extreme Cold Overlay - Reusing DebugGrid for now but could be a distinct blue layer if needed. 
+          For now, DebugGrid handles color based on severity so it should look okay (Low Severity = Blueish). 
+      */}
+      {isMapLoaded && showExtremeCold && (
+        <DebugGridLayer
+          map={mapRef.current}
+          points={visualizationPoints.cold}
+          visible={true}
+        />
+      )}
+
+      {/* Debug Grid Layer (Full Raw Data) */}
+      {isMapLoaded && showDebugGrid && !showExtremeHeat && !showExtremeCold && (
+        <DebugGridLayer
+          map={mapRef.current}
+          points={stiData?.points || []}
+          visible={true}
+        />
+      )}
 
       {/* Search Bar */}
       <motion.div
@@ -806,26 +912,27 @@ const MapView = () => {
 
 
       {/* Map Controls */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => setBaseLayer(baseLayer === 'streets' ? 'satellite' : 'streets')}
-          title="Cambiar capa base"
-        >
-          <Layers className="w-4 h-4" />
-        </Button>
+      {/* Map Controls */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 items-end">
+        <MapLayerControl
+          currentBaseLayer={baseLayer}
+          onBaseLayerChange={setBaseLayer}
+        />
+
         <Button
           variant="secondary"
           size="icon"
           onClick={() => {
             if (mapRef.current && selectedFarm) {
-              mapRef.current.flyTo([selectedFarm.location.lat, selectedFarm.location.lng], 14);
+              mapRef.current.flyTo([selectedFarm.location.lat, selectedFarm.location.lng], 14, {
+                duration: 1.5
+              });
             }
           }}
           title="Centrar en parcela"
+          className="bg-card/80 backdrop-blur-md border-border/50 shadow-lg"
         >
-          <MapIcon className="w-4 h-4" />
+          <Locate className="w-4 h-4" />
         </Button>
       </div>
 

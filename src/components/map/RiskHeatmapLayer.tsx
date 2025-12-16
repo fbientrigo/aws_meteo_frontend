@@ -45,6 +45,13 @@ const RiskHeatmapLayer = ({
 
         if (!visible || points.length === 0) return;
 
+        // Check if map container has valid dimensions
+        const container = map.getContainer();
+        if (!container || container.offsetWidth <= 0 || container.offsetHeight <= 0) {
+            // Map not visible or ready yet
+            return;
+        }
+
         try {
             // Create pane if it doesn't exist
             const paneName = `risk-pane-${riskType}`;
