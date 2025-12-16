@@ -7,9 +7,10 @@ interface DebugGridLayerProps {
     map: L.Map | null;
     points: HeatmapPoint[];
     visible: boolean;
+    onHover?: (point: HeatmapPoint | null) => void;
 }
 
-const DebugGridLayer = ({ map, points, visible }: DebugGridLayerProps) => {
+const DebugGridLayer = ({ map, points, visible, onHover }: DebugGridLayerProps) => {
     const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
     useEffect(() => {
@@ -39,18 +40,49 @@ const DebugGridLayer = ({ map, points, visible }: DebugGridLayerProps) => {
             console.log(`🐞 [DebugGridLayer] Sampling 1/${step} points. Showing ${renderPoints.length}/${points.length} for coverage.`);
         }
 
+        // DEBUG: Sample the first few points to check color/severity
+        if (renderPoints.length > 0) {
+            const sample = renderPoints[0];
+            const sampleColor = getSeverityColor(sample.severity);
+            console.log("🐛 [DebugGridLayer] Sample Point:", {
+                severity: sample.severity,
+                color: sampleColor,
+                lat: sample.lat,
+                int: sample.intensity
+            });
+        }
+
         renderPoints.forEach(p => {
             const color = getSeverityColor(p.severity);
 
             // Create a small circle marker for each point
             const marker = L.circleMarker([p.lat, p.lng], {
-                radius: 4,
-                fillColor: color,
+                radius: 5, // Slightly larger
+                fillColor: color, // First attempt
                 color: '#fff',
-                weight: 1,
-                opacity: 0.8,
-                fillOpacity: 0.8
+                weight: 1.5,
+                opacity: 1,
+                fillOpacity: 0.9,
+                fill: true, // Explicitly enable fill
+                interactive: true,
+                bubblingMouseEvents: false
             });
+
+            // FORCE STYLE UPDATE (Double-tap to ensure React/Leaflet didn't miss it)
+            // Sometimes custom props need a tick or explicit set
+            marker.setStyle({ fillColor: color, fillOpacity: 0.9 });
+
+            // Hover Events
+            if (onHover) {
+                marker.on('mouseover', (e) => {
+                    onHover(p);
+                    e.target.setStyle({ weight: 3, color: '#000' });
+                });
+                marker.on('mouseout', (e) => {
+                    onHover(null);
+                    e.target.setStyle({ weight: 1.5, color: '#fff' });
+                });
+            }
 
             // Create detailed popup with raw data
             const popupContent = `

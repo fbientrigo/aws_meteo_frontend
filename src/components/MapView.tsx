@@ -38,7 +38,8 @@ import RiskHeatmapLayer from "@/components/map/RiskHeatmapLayer";
 import { generateRiskHeatmapPoints } from "@/utils/riskHeatmapUtils";
 import DebugGridLayer from "@/components/map/DebugGridLayer";
 import VisualizationControls from "@/components/map/VisualizationControls";
-import { isExtremeHeat, isExtremeCold } from "@/utils/climatUtils";
+import { isExtremeHeat, isExtremeCold, getSeverityLabel } from "@/utils/climatUtils";
+import { HeatmapPoint } from "@/types";
 
 const MapView = () => {
   const mapRef = useRef<L.Map | null>(null);
@@ -143,6 +144,9 @@ const MapView = () => {
     layer: any;
   } | null>(null);
 
+  // Hover Info State
+  const [hoveredPoint, setHoveredPoint] = useState<HeatmapPoint | null>(null);
+
   const centerLat = selectedFarm?.location.lat || -33.6642;
   const centerLng = selectedFarm?.location.lng || -70.9289;
 
@@ -179,11 +183,18 @@ const MapView = () => {
   const visualizationPoints = useMemo(() => {
     if (!stiData || !stiData.points) return { heat: [], cold: [], all: [] };
 
-    return {
-      all: stiData.points,
-      heat: stiData.points.filter(p => isExtremeHeat(p.intensity)),
-      cold: stiData.points.filter(p => isExtremeCold(p.intensity))
-    };
+    const all = stiData.points;
+    const heat = stiData.points.filter(p => isExtremeHeat(p.intensity));
+    const cold = stiData.points.filter(p => isExtremeCold(p.intensity));
+
+    console.log("📊 [MapView] Derived Datasets:", {
+      total: all.length,
+      heatCount: heat.length,
+      coldCount: cold.length,
+      sampleHeat: heat.slice(0, 3)
+    });
+
+    return { all, heat, cold };
   }, [stiData]);
 
   // Handle FlyTo from Store
@@ -199,16 +210,36 @@ const MapView = () => {
 
   // Auto-Fly to STI Data Bounds
   // Auto-Fly to STI Data Bounds
+  // Auto-Fly to STI Data Bounds
   useEffect(() => {
     if (mapRef.current && stiData && stiData.points && stiData.points.length > 0) {
       try {
-        // Calculate bounds dynamically from valid points
-        const points = stiData.points.map(p => [p.lat, p.lng] as [number, number]);
-        const bounds = L.latLngBounds(points);
+        // Filter potentially invalid points just in case (using isFinite for stricter check)
+        const validPoints = stiData.points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+
+        if (validPoints.length === 0) {
+          console.warn("⚠️ [MapView] No valid points for bounds calculation");
+          return;
+        }
+
+        const bounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng]));
 
         if (bounds.isValid()) {
-          mapRef.current.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
-          toast.success("Enfocando datos satelitales...");
+          // CRITICAL CHECK: Ensure map has dimensions before flying
+          const size = mapRef.current.getSize();
+          if (size.x > 0 && size.y > 0) {
+            console.log("✈️ [MapView] Flying to bounds:", bounds.toBBoxString());
+            mapRef.current.flyToBounds(bounds, {
+              padding: [50, 50],
+              maxZoom: 12,
+              duration: 1.5
+            });
+            toast.success("Enfocando datos satelitales...");
+          } else {
+            console.warn("⚠️ [MapView] Map container has no dimensions. Skipping flyTo.");
+          }
+        } else {
+          console.warn("⚠️ [MapView] Invalid bounds calculated");
         }
       } catch (error) {
         console.error("Error calculating bounds:", error);
@@ -857,22 +888,23 @@ const MapView = () => {
       )}
 
       {/* Extreme Heat Overlay */}
+      {/* Extreme Heat Overlay */}
       {isMapLoaded && showExtremeHeat && (
         <DebugGridLayer
           map={mapRef.current}
           points={visualizationPoints.heat}
           visible={true}
+          onHover={setHoveredPoint}
         />
       )}
 
-      {/* Extreme Cold Overlay - Reusing DebugGrid for now but could be a distinct blue layer if needed. 
-          For now, DebugGrid handles color based on severity so it should look okay (Low Severity = Blueish). 
-      */}
+      {/* Extreme Cold Overlay */}
       {isMapLoaded && showExtremeCold && (
         <DebugGridLayer
           map={mapRef.current}
           points={visualizationPoints.cold}
           visible={true}
+          onHover={setHoveredPoint}
         />
       )}
 
@@ -882,8 +914,40 @@ const MapView = () => {
           map={mapRef.current}
           points={stiData?.points || []}
           visible={true}
+          onHover={setHoveredPoint}
         />
       )}
+
+      {/* Hover Info Panel */}
+      <AnimatePresence>
+        {hoveredPoint && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[1000] pointer-events-none"
+          >
+            <Card className="bg-black/80 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-lg border border-white/10 flex items-center gap-4 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">POS:</span>
+                <span>{hoveredPoint.lat.toFixed(2)}, {hoveredPoint.lng.toFixed(2)}</span>
+              </div>
+              <div className="h-4 w-px bg-white/20" />
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">STI:</span>
+                <span className={hoveredPoint.intensity > 0.8 ? 'text-red-400 font-bold' : hoveredPoint.intensity < 0.2 ? 'text-blue-400 font-bold' : 'text-green-400'}>
+                  {hoveredPoint.intensity.toFixed(3)}
+                </span>
+              </div>
+              <div className="h-4 w-px bg-white/20" />
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">SEV:</span>
+                <span>{getSeverityLabel(hoveredPoint.severity)}</span>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Search Bar */}
       <motion.div

@@ -6,7 +6,7 @@ export const SEVERITY_COLORS: Record<SeverityLevel, string> = {
     LOW: '#84CC16',         // Light Green
     MODERATE: '#EAB308',    // Yellow
     HIGH: '#F97316',        // Orange
-    VERY_HIGH: '#EF4444'    // Red
+    VERY_HIGH: '#DC2626'    // Red-600 (Darker Red for better contrast)
 };
 
 // Severity Labels
